@@ -1,0 +1,6 @@
+# Coverage reports
+cover.out
+
+# Main package build
+/paperboymq
+
