@@ -179,7 +179,7 @@ func TestQueueHandler_AddRemoveCycle(t *testing.T) {
 		})
 	}
 	if q.Len() != 50 {
-		t.Error("Unexpected queue length, expected %d got %d", 50, q.Len())
+		t.Errorf("Unexpected queue length, expected %d got %d", 50, q.Len())
 	}
 
 	for i := 0; i < 25; i++ {
@@ -191,7 +191,7 @@ func TestQueueHandler_AddRemoveCycle(t *testing.T) {
 		q.Remove()
 	}
 	if q.Len() != 25 {
-		t.Error("Unexpected queue length, expected %d got %d", 25, q.Len())
+		t.Errorf("Unexpected queue length, expected %d got %d", 25, q.Len())
 	}
 
 	for i := 50; i < 100; i++ {
@@ -200,7 +200,7 @@ func TestQueueHandler_AddRemoveCycle(t *testing.T) {
 		})
 	}
 	if q.Len() != 75 {
-		t.Error("Unexpected queue length, expected %d got %d", 75, q.Len())
+		t.Errorf("Unexpected queue length, expected %d got %d", 75, q.Len())
 	}
 
 	for i := 25; i < 100; i++ {
@@ -212,7 +212,7 @@ func TestQueueHandler_AddRemoveCycle(t *testing.T) {
 		q.Remove()
 	}
 	if q.Len() != 0 {
-		t.Error("Unexpected queue length, expected %d got %d", 0, q.Len())
+		t.Errorf("Unexpected queue length, expected %d got %d", 0, q.Len())
 	}
 }
 

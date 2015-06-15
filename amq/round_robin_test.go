@@ -78,32 +78,32 @@ func TestRoundRobinHandler_AddRemoveCycle(t *testing.T) {
 
 	rr.Add(c1)
 	if rr.Len() != 1 {
-		t.Error("Unexpected round-robin ring length, expected %d got %d", 1, rr.Len())
+		t.Errorf("Unexpected round-robin ring length, expected %d got %d", 1, rr.Len())
 	}
 
 	rr.Add(c2)
 	if rr.Len() != 2 {
-		t.Error("Unexpected round-robin ring length, expected %d got %d", 2, rr.Len())
+		t.Errorf("Unexpected round-robin ring length, expected %d got %d", 2, rr.Len())
 	}
 
 	rr.Remove(c2)
 	if rr.Len() != 1 {
-		t.Error("Unexpected round-robin ring length, expected %d got %d", 1, rr.Len())
+		t.Errorf("Unexpected round-robin ring length, expected %d got %d", 1, rr.Len())
 	}
 
 	rr.Add(c3)
 	if rr.Len() != 2 {
-		t.Error("Unexpected round-robin ring length, expected %d got %d", 2, rr.Len())
+		t.Errorf("Unexpected round-robin ring length, expected %d got %d", 2, rr.Len())
 	}
 
 	rr.Remove(c3)
 	if rr.Len() != 1 {
-		t.Error("Unexpected round-robin ring length, expected %d got %d", 1, rr.Len())
+		t.Errorf("Unexpected round-robin ring length, expected %d got %d", 1, rr.Len())
 	}
 
 	rr.Remove(c1)
 	if rr.Len() != 0 {
-		t.Error("Unexpected round-robin ring length, expected %d got %d", 1, rr.Len())
+		t.Errorf("Unexpected round-robin ring length, expected %d got %d", 1, rr.Len())
 	}
 }
 
