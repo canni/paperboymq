@@ -91,10 +91,6 @@ func (self *consumersRing) add(consumer MessageConsumer) *consumersRing {
 }
 
 func (self *consumersRing) remove(consumer MessageConsumer) *consumersRing {
-	if self == nil {
-		return nil
-	}
-
 	// find element whose next ring element contains consumer to remove
 	current := self
 	for current.next.consumer != consumer {

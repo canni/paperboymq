@@ -17,6 +17,7 @@ limitations under the License.
 package amq
 
 import (
+	"sync"
 	"testing"
 )
 
@@ -30,7 +31,7 @@ func TestQueueHandler_NewHasZeroLength(t *testing.T) {
 
 func TestQueueHandler_PeekOnEmptyQueuePanics(t *testing.T) {
 	defer func() {
-		if err := recover(); err == nil {
+		if err := recover(); err != "queue: Peek() called on empty queue" {
 			t.Error("Expected panic not fired")
 		}
 	}()
@@ -41,8 +42,8 @@ func TestQueueHandler_PeekOnEmptyQueuePanics(t *testing.T) {
 
 func TestQueueHandler_RemoveFromEmptyQueuePanics(t *testing.T) {
 	defer func() {
-		if err := recover(); err == nil {
-			t.Error("Expected panic not fired")
+		if err := recover(); err != "queue: Remove() called on empty queue" {
+			t.Error("Expected panic not fired", err)
 		}
 	}()
 
@@ -106,6 +107,9 @@ func TestQueueHandler_AddRemoveCycle(t *testing.T) {
 			priority: uint8(i),
 		})
 	}
+	if q.Len() != 50 {
+		t.Error("Unexpected queue length, expected %d got %d", 50, q.Len())
+	}
 
 	for i := 0; i < 25; i++ {
 		msg := q.Peek()
@@ -115,11 +119,17 @@ func TestQueueHandler_AddRemoveCycle(t *testing.T) {
 
 		q.Remove()
 	}
+	if q.Len() != 25 {
+		t.Error("Unexpected queue length, expected %d got %d", 25, q.Len())
+	}
 
 	for i := 50; i < 100; i++ {
 		q.Add(testMsg{
 			priority: uint8(i),
 		})
+	}
+	if q.Len() != 75 {
+		t.Error("Unexpected queue length, expected %d got %d", 75, q.Len())
 	}
 
 	for i := 25; i < 100; i++ {
@@ -130,4 +140,35 @@ func TestQueueHandler_AddRemoveCycle(t *testing.T) {
 
 		q.Remove()
 	}
+	if q.Len() != 0 {
+		t.Error("Unexpected queue length, expected %d got %d", 0, q.Len())
+	}
+}
+
+type testMsg struct {
+	headers    Headers
+	routingKey string
+	priority   uint8
+	body       []byte
+}
+
+func (self testMsg) Headers() Headers {
+	return self.headers
+}
+
+func (self testMsg) RoutingKey() string {
+	return self.routingKey
+}
+
+func (self testMsg) Priority() uint8 {
+	return self.priority
+}
+
+func (self testMsg) Body() []byte {
+	return self.body
+}
+
+type countingConsumer struct {
+	mu         sync.RWMutex
+	callsCount int
 }

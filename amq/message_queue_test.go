@@ -14,15 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package amq
+// Public interface tests
+package amq_test
 
 import (
 	"sync"
 	"testing"
+
+	"github.com/canni/paperboymq/amq"
 )
 
-func TestEmptyQueueHasZeroLength(t *testing.T) {
-	q := NewQueue(NewQueueHandler)
+func TestMessageQueue_EmptyQueueHasZeroLength(t *testing.T) {
+	q := amq.NewQueue(amq.NewQueueHandler)
 
 	if q.Len() != 0 {
 		t.Errorf("Unexpected queue length")
@@ -30,9 +33,9 @@ func TestEmptyQueueHasZeroLength(t *testing.T) {
 	q.Close()
 }
 
-func TestForceCloseOnEmptyQueue(t *testing.T) {
+func TestMessageQueue_ForceCloseOnEmptyQueue(t *testing.T) {
 	// Just to get coverage, there is no way to distinguish close from force close on empty queue
-	q := NewQueue(NewQueueHandler)
+	q := amq.NewQueue(amq.NewQueueHandler)
 
 	if q.Len() != 0 {
 		t.Errorf("Unexpected queue length")
@@ -40,8 +43,8 @@ func TestForceCloseOnEmptyQueue(t *testing.T) {
 	q.ForceClose()
 }
 
-func TestQueueWithoutSubscribersAcummulateMessages(t *testing.T) {
-	q := NewQueue(NewQueueHandler)
+func TestMessageQueue_QueueWithoutSubscribersAcummulateMessages(t *testing.T) {
+	q := amq.NewQueue(amq.NewQueueHandler)
 	for i := 0; i < 100; i++ {
 		q.Consume(testMsg{})
 	}
@@ -52,8 +55,71 @@ func TestQueueWithoutSubscribersAcummulateMessages(t *testing.T) {
 	q.Close()
 }
 
-func TestQueueCloseFlushesMessages(t *testing.T) {
-	q := NewQueue(NewQueueHandler)
+func TestMessageQueue_SubscribeConsumer(t *testing.T) {
+	q := amq.NewQueue(amq.NewQueueHandler)
+	defer q.Close()
+
+	c := new(countingConsumer)
+
+	err := q.Subscribe(c)
+	if err != nil {
+		t.Error("Unexpected error")
+	}
+}
+
+func TestMessageQueue_SubscribeConsumerTwiceReturnsError(t *testing.T) {
+	q := amq.NewQueue(amq.NewQueueHandler)
+	defer q.Close()
+
+	c := new(countingConsumer)
+
+	err := q.Subscribe(c)
+	if err != nil {
+		t.Error("Unexpected error")
+	}
+
+	err = q.Subscribe(c)
+	if err != amq.ErrConsumerAlreadySubscribed {
+		t.Error("Invalid error returned", err)
+	}
+}
+
+func TestMessageQueue_UnsubscribeWithEmptySubscriptionsListReturnsError(t *testing.T) {
+	q := amq.NewQueue(amq.NewQueueHandler)
+	defer q.Close()
+
+	c := new(countingConsumer)
+
+	err := q.Unsubscbe(c)
+	if err != amq.ErrConsumerNotFound {
+		t.Error("Invalid error returned", err)
+	}
+}
+
+func TestMessageQueue_UnsubscribeTwiceReturnsError(t *testing.T) {
+	q := amq.NewQueue(amq.NewQueueHandler)
+	defer q.Close()
+
+	c := new(countingConsumer)
+
+	err := q.Subscribe(c)
+	if err != nil {
+		t.Error("Unexpected error")
+	}
+
+	err = q.Unsubscbe(c)
+	if err != nil {
+		t.Error("Unexpected error")
+	}
+
+	err = q.Unsubscbe(c)
+	if err != amq.ErrConsumerNotFound {
+		t.Error("Invalid error returned", err)
+	}
+}
+
+func TestMessageQueue_QueueCloseFlushesMessages(t *testing.T) {
+	q := amq.NewQueue(amq.NewQueueHandler)
 	c := new(countingConsumer)
 	err := q.Subscribe(c)
 
@@ -80,11 +146,11 @@ func TestQueueCloseFlushesMessages(t *testing.T) {
 	c.mu.RUnlock()
 }
 
-func TestQueueBalancesMessagesBetweenConsumers(t *testing.T) {
+func TestMessageQueue_QueueBalancesMessagesBetweenConsumers(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	q := NewQueue(NewQueueHandler)
+	q := amq.NewQueue(amq.NewQueueHandler)
 
 	c1 := new(countingConsumer)
 	c2 := new(countingConsumer)
@@ -116,13 +182,13 @@ func TestQueueBalancesMessagesBetweenConsumers(t *testing.T) {
 }
 
 type testMsg struct {
-	headers    Headers
+	headers    amq.Headers
 	routingKey string
 	priority   uint8
 	body       []byte
 }
 
-func (self testMsg) Headers() Headers {
+func (self testMsg) Headers() amq.Headers {
 	return self.headers
 }
 
@@ -143,7 +209,7 @@ type countingConsumer struct {
 	callsCount int
 }
 
-func (self *countingConsumer) Consume(msg Message) {
+func (self *countingConsumer) Consume(msg amq.Message) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
