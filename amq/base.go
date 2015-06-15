@@ -44,6 +44,7 @@ type MessageConsumer interface {
 type RoundRobinDispatcher interface {
 	Subscribe(MessageConsumer) error
 	Unsubscribe(MessageConsumer) error
+	Subscriptions() []MessageConsumer
 }
 
 // Binding is an interface representing connection between Message Exchange and

@@ -55,6 +55,51 @@ func TestMessageQueue_QueueWithoutSubscribersAcummulateMessages(t *testing.T) {
 	q.Close()
 }
 
+func TestMessageQueue_EmptySubscibersList(t *testing.T) {
+	q := amq.NewQueue(amq.NewQueueHandler)
+	defer q.Close()
+
+	list := q.Subscriptions()
+
+	if len(list) != 0 {
+		t.Error("Unexpected consumer in list")
+	}
+
+	if list != nil {
+		t.Error("Unexpected type")
+	}
+}
+
+func TestMessageQueue_SubscibersList(t *testing.T) {
+	q := amq.NewQueue(amq.NewQueueHandler)
+	defer q.Close()
+
+	subs := map[amq.MessageConsumer]struct{}{
+		new(countingConsumer): struct{}{},
+		new(countingConsumer): struct{}{},
+		new(countingConsumer): struct{}{},
+	}
+
+	for c := range subs {
+		err := q.Subscribe(c)
+		if err != nil {
+			t.Error("Unexpected error", err)
+		}
+	}
+
+	list := q.Subscriptions()
+
+	if len(list) != 3 {
+		t.Error("Unexpected consumer count, expedted:", 4, "got:", len(list))
+	}
+
+	for _, c := range list {
+		if _, found := subs[c]; !found {
+			t.Error("Consumer not found in reference list")
+		}
+	}
+}
+
 func TestMessageQueue_SubscribeConsumer(t *testing.T) {
 	q := amq.NewQueue(amq.NewQueueHandler)
 	defer q.Close()

@@ -36,7 +36,8 @@ type QueueHandler interface {
 // or by calling ForceClose(), witch will drop messages and exit immediately.
 type Queue struct {
 	input, output chan Message
-	subscriptions chan *subscriptionOp
+	subscribeOp   chan *subscriptionOp
+	subscriptions chan []MessageConsumer
 	lenght        chan int
 	quit, quitCnf chan bool
 	queueFactory  func() QueueHandler
@@ -47,7 +48,8 @@ func NewQueue(handlerFactory func() QueueHandler) *Queue {
 	q := &Queue{
 		input:         make(chan Message),
 		output:        make(chan Message),
-		subscriptions: make(chan *subscriptionOp),
+		subscribeOp:   make(chan *subscriptionOp),
+		subscriptions: make(chan []MessageConsumer),
 		lenght:        make(chan int),
 		quit:          make(chan bool),
 		quitCnf:       make(chan bool),
@@ -73,7 +75,7 @@ func (self *Queue) Consume(msg Message) {
 // ErrConsumerAlreadySubscribed
 func (self *Queue) Subscribe(consumer MessageConsumer) error {
 	result := make(chan error)
-	self.subscriptions <- &subscriptionOp{
+	self.subscribeOp <- &subscriptionOp{
 		subscribe: true,
 		consumer:  consumer,
 		result:    result,
@@ -89,13 +91,20 @@ func (self *Queue) Subscribe(consumer MessageConsumer) error {
 // ErrConsumerNotFound
 func (self *Queue) Unsubscribe(consumer MessageConsumer) error {
 	result := make(chan error)
-	self.subscriptions <- &subscriptionOp{
+	self.subscribeOp <- &subscriptionOp{
 		subscribe: false,
 		consumer:  consumer,
 		result:    result,
 	}
 
 	return <-result
+}
+
+// Subscriptions return list of currently subscribed consumers, it's safe
+// to call this method from multiple goroutines.
+func (self *Queue) Subscriptions() []MessageConsumer {
+	self.subscriptions <- nil
+	return <-self.subscriptions
 }
 
 // Len returns count of currently held messages in Queue, it's safe to call this
@@ -180,12 +189,19 @@ func (self *Queue) outputHandler() {
 			case msg := <-self.output:
 				rr.Next().Consume(msg)
 
-			case op := <-self.subscriptions:
+			case op := <-self.subscribeOp:
 				if op.subscribe {
 					op.result <- rr.Add(op.consumer)
 				} else {
 					op.result <- rr.Remove(op.consumer)
 				}
+
+			case <-self.subscriptions:
+				list := make([]MessageConsumer, 0, rr.Len())
+				for subscriber := range rr.consumers {
+					list = append(list, subscriber)
+				}
+				self.subscriptions <- list
 
 			case force := <-self.quit:
 				if !force {
@@ -198,12 +214,15 @@ func (self *Queue) outputHandler() {
 			}
 		} else {
 			select {
-			case op := <-self.subscriptions:
+			case op := <-self.subscribeOp:
 				if op.subscribe {
 					op.result <- rr.Add(op.consumer)
 				} else {
 					op.result <- ErrConsumerNotFound
 				}
+
+			case <-self.subscriptions:
+				self.subscriptions <- nil
 
 			case force := <-self.quit:
 				if !force {
