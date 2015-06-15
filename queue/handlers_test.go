@@ -19,49 +19,68 @@ package queue
 import (
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/canni/paperboymq/amq"
 )
 
 func TestQueueHandler_NewHasZeroLength(t *testing.T) {
-	q := NewQueueHandler()
-
-	if q.Len() != 0 {
-		t.Error("Unexpected non-empty queue")
+	for _, q := range []amq.QueueHandler{NewQueueHandler(), NewPQHandler()} {
+		if q.Len() != 0 {
+			t.Error("Unexpected non-empty queue")
+		}
 	}
 }
 
 func TestQueueHandler_PeekOnEmptyQueuePanics(t *testing.T) {
-	defer func() {
-		if err := recover(); err != "queue: Peek() called on empty queue" {
-			t.Error("Expected panic not fired")
-		}
-	}()
+	var wg sync.WaitGroup
+	wg.Add(2)
 
-	q := NewQueueHandler()
-	_ = q.Peek()
+	for _, q := range []amq.QueueHandler{NewQueueHandler(), NewPQHandler()} {
+		go func(q amq.QueueHandler) {
+			defer func() {
+				if err := recover(); err != "queue: Peek() called on empty queue" {
+					t.Error("Expected panic not fired")
+				}
+				wg.Done()
+			}()
+
+			_ = q.Peek()
+		}(q)
+	}
+
+	wg.Wait()
 }
 
 func TestQueueHandler_RemoveFromEmptyQueuePanics(t *testing.T) {
-	defer func() {
-		if err := recover(); err != "queue: Remove() called on empty queue" {
-			t.Error("Expected panic not fired", err)
-		}
-	}()
+	var wg sync.WaitGroup
+	wg.Add(2)
 
-	q := NewQueueHandler()
-	q.Remove()
+	for _, q := range []amq.QueueHandler{NewQueueHandler(), NewPQHandler()} {
+		go func(q amq.QueueHandler) {
+			defer func() {
+				if err := recover(); err != "queue: Remove() called on empty queue" {
+					t.Error("Expected panic not fired")
+				}
+				wg.Done()
+			}()
+
+			q.Remove()
+		}(q)
+	}
+
+	wg.Wait()
 }
 
 func TestQueueHandler_QueuesMessages(t *testing.T) {
-	q := NewQueueHandler()
+	for _, q := range []amq.QueueHandler{NewQueueHandler(), NewPQHandler()} {
+		for i := 0; i < 100; i++ {
+			q.Add(testMsg{})
+		}
 
-	for i := 0; i < 100; i++ {
-		q.Add(testMsg{})
-	}
-
-	if q.Len() != 100 {
-		t.Errorf("Invalid number of meesages, expected %d got %d", 100, q.Len())
+		if q.Len() != 100 {
+			t.Errorf("Invalid number of meesages, expected %d got %d", 100, q.Len())
+		}
 	}
 }
 
@@ -84,20 +103,70 @@ func TestQueueHandler_ReturnMessagesInCorrectOrder(t *testing.T) {
 	}
 }
 
+func TestPQHandler_ReturnMessagesInCorrectOrder(t *testing.T) {
+	q := NewPQHandler()
+
+	for i := 0; i < 100; i++ {
+		q.Add(testMsg{
+			priority: uint8(i % 10),
+		})
+	}
+
+	for p := 9; p >= 0; p-- {
+		for i := 0; i < 10; i++ {
+			msg := q.Peek()
+			if msg.Priority() != uint8(p) {
+				t.Errorf("Invalid message priority, expected %d got %d", p, msg.Priority())
+			}
+
+			q.Remove()
+		}
+	}
+}
+
+func TestPQHandler_OrdersMassegesBasedOnTimeWithinSamePriority(t *testing.T) {
+	q := NewPQHandler()
+
+	early := time.Now()
+	time.Sleep(10 * time.Millisecond)
+	late := time.Now()
+
+	q.Add(testMsg{
+		priority:  1,
+		timestamp: late,
+	})
+	q.Add(testMsg{
+		priority:  1,
+		timestamp: early,
+	})
+
+	msg := q.Peek()
+	if msg.Timestamp() != early {
+		t.Error("Invalid order")
+	}
+	q.Remove()
+
+	msg = q.Peek()
+	if msg.Timestamp() != late {
+		t.Error("Invalid order")
+	}
+	q.Remove()
+}
+
 func TestQueueHandler_AfterReturningAllMessagesHasZeroLength(t *testing.T) {
-	q := NewQueueHandler()
+	for _, q := range []amq.QueueHandler{NewQueueHandler(), NewPQHandler()} {
+		for i := 0; i < 100; i++ {
+			q.Add(testMsg{})
+		}
 
-	for i := 0; i < 100; i++ {
-		q.Add(testMsg{})
-	}
+		for i := 0; i < 100; i++ {
+			_ = q.Peek()
+			q.Remove()
+		}
 
-	for i := 0; i < 100; i++ {
-		_ = q.Peek()
-		q.Remove()
-	}
-
-	if q.Len() != 0 {
-		t.Error("Unexpected non-empty queue")
+		if q.Len() != 0 {
+			t.Error("Unexpected non-empty queue")
+		}
 	}
 }
 
@@ -151,6 +220,7 @@ type testMsg struct {
 	headers    amq.Headers
 	routingKey string
 	priority   uint8
+	timestamp  time.Time
 	body       []byte
 }
 
@@ -164,6 +234,10 @@ func (self testMsg) RoutingKey() string {
 
 func (self testMsg) Priority() uint8 {
 	return self.priority
+}
+
+func (self testMsg) Timestamp() time.Time {
+	return self.timestamp
 }
 
 func (self testMsg) Body() []byte {

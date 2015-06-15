@@ -20,6 +20,7 @@ package amq_test
 import (
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/canni/paperboymq/amq"
 	"github.com/canni/paperboymq/queue"
@@ -231,6 +232,7 @@ type testMsg struct {
 	headers    amq.Headers
 	routingKey string
 	priority   uint8
+	timestamp  time.Time
 	body       []byte
 }
 
@@ -244,6 +246,10 @@ func (self testMsg) RoutingKey() string {
 
 func (self testMsg) Priority() uint8 {
 	return self.priority
+}
+
+func (self testMsg) Timestamp() time.Time {
+	return self.timestamp
 }
 
 func (self testMsg) Body() []byte {

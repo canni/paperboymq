@@ -17,6 +17,10 @@ limitations under the License.
 // Package amq provides high-level message broker building blocks.
 package amq
 
+import (
+	"time"
+)
+
 // Headers type is a mapping of string header names to values.
 type Headers map[string]interface{}
 
@@ -27,6 +31,7 @@ type Message interface {
 	Headers() Headers
 	RoutingKey() string
 	Priority() uint8
+	Timestamp() time.Time
 	Body() []byte
 }
 
