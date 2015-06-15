@@ -24,24 +24,36 @@ type queueHandler struct {
 	q *queue.Queue
 }
 
+// NewQueueHandler returns default in-memory message queue implementation.
+//
+// Default implementation is not goroutine-safe, concurrent access is controlled
+// inside high-level Queue type.
 func NewQueueHandler() QueueHandler {
 	return queueHandler{
 		q: queue.New(),
 	}
 }
 
+// Add enqueues message.
 func (self queueHandler) Add(msg Message) {
 	self.q.Add(msg)
 }
 
+// Peek returns current element at the front of queue.
+//
+// This method panics if the queue is empty.
 func (self queueHandler) Peek() Message {
 	return self.q.Peek().(Message)
 }
 
+// Remove dequeues element at the front of queue.
+//
+// This method panics if the queue is empty.
 func (self queueHandler) Remove() {
 	self.q.Remove()
 }
 
+// Len obviously returns lenght of queue
 func (self queueHandler) Len() int {
 	return self.q.Length()
 }

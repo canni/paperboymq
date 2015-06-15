@@ -16,6 +16,9 @@ limitations under the License.
 
 package amq
 
+// QueueHandler is an interface used by Queue implementation for internal
+// queueing of messages, implementors does not need to worry about concurrent
+// access.
 type QueueHandler interface {
 	Add(Message)
 	Peek() Message
@@ -23,6 +26,14 @@ type QueueHandler interface {
 	Len() int
 }
 
+// Queue is a base AMQ entity, it supports goroutine-safe concurrent access.
+//
+// Queue needs to be initialized by calling NewQueue()
+//
+// Queue delivers messages to subscribed MessageConsumers in a round-robin
+// fashion. Queue MUST be closed after use, either by calling Close()
+// witch will flush all held messages to subscibed consumers (if any),
+// or by calling ForceClose(), witch will drop messages and exit immediately.
 type Queue struct {
 	input, output chan Message
 	subscriptions chan *subscriptionOp
@@ -31,6 +42,7 @@ type Queue struct {
 	queueFactory  func() QueueHandler
 }
 
+// NewQueue returns initialized Queue.
 func NewQueue(handlerFactory func() QueueHandler) *Queue {
 	q := &Queue{
 		input:         make(chan Message),
@@ -48,10 +60,17 @@ func NewQueue(handlerFactory func() QueueHandler) *Queue {
 	return q
 }
 
+// Consume enqueues message in Queue, it's safe to call this method from
+// multiple goroutines.
 func (self *Queue) Consume(msg Message) {
 	self.input <- msg
 }
 
+// Subscribe new consumer in a round-robin ring, it's safe to call this method
+// from multiple goroutines.
+//
+// If consumer is already subscribed the returned error will be of type:
+// ErrConsumerAlreadySubscribed
 func (self *Queue) Subscribe(consumer MessageConsumer) error {
 	result := make(chan error)
 	self.subscriptions <- &subscriptionOp{
@@ -63,7 +82,12 @@ func (self *Queue) Subscribe(consumer MessageConsumer) error {
 	return <-result
 }
 
-func (self *Queue) Unsubscbe(consumer MessageConsumer) error {
+// Unsubscribe consumer from round-robin ring, it's safe to call this method
+// from multiple goroutines.
+//
+// If consumer isn't already subscribed the returned error will be of type:
+// ErrConsumerNotFound
+func (self *Queue) Unsubscribe(consumer MessageConsumer) error {
 	result := make(chan error)
 	self.subscriptions <- &subscriptionOp{
 		subscribe: false,
@@ -74,14 +98,23 @@ func (self *Queue) Unsubscbe(consumer MessageConsumer) error {
 	return <-result
 }
 
+// Len returns count of currently held messages in Queue, it's safe to call this
+// method from multiple goroutines.
 func (self *Queue) Len() int {
 	return <-self.lenght
 }
 
+// Close gracefully flushes messages to all subscribed consumers (if any),
+// and closes Queue.
+//
+// Is an error to use queue after it has been closed.
 func (self *Queue) Close() {
 	self.close(false)
 }
 
+// Close drops all messages and closes Queue.
+//
+// Is an error to use queue after it has been force-closed.
 func (self *Queue) ForceClose() {
 	self.close(true)
 }
@@ -189,3 +222,9 @@ type subscriptionOp struct {
 	consumer  MessageConsumer
 	result    chan error
 }
+
+// Ensure *Queue implements Consumer interface
+var _ MessageConsumer = &Queue{}
+
+// Ensure *Queue implements RR Dispatch inetrface
+var _ RoundRobinDispatcher = &Queue{}

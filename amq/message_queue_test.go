@@ -90,7 +90,7 @@ func TestMessageQueue_UnsubscribeWithEmptySubscriptionsListReturnsError(t *testi
 
 	c := new(countingConsumer)
 
-	err := q.Unsubscbe(c)
+	err := q.Unsubscribe(c)
 	if err != amq.ErrConsumerNotFound {
 		t.Error("Invalid error returned", err)
 	}
@@ -107,12 +107,12 @@ func TestMessageQueue_UnsubscribeTwiceReturnsError(t *testing.T) {
 		t.Error("Unexpected error")
 	}
 
-	err = q.Unsubscbe(c)
+	err = q.Unsubscribe(c)
 	if err != nil {
 		t.Error("Unexpected error")
 	}
 
-	err = q.Unsubscbe(c)
+	err = q.Unsubscribe(c)
 	if err != amq.ErrConsumerNotFound {
 		t.Error("Invalid error returned", err)
 	}
