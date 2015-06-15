@@ -22,10 +22,11 @@ import (
 	"testing"
 
 	"github.com/canni/paperboymq/amq"
+	"github.com/canni/paperboymq/queue"
 )
 
 func TestMessageQueue_EmptyQueueHasZeroLength(t *testing.T) {
-	q := amq.NewQueue(amq.NewQueueHandler)
+	q := amq.NewQueue(queue.NewQueueHandler)
 
 	if q.Len() != 0 {
 		t.Errorf("Unexpected queue length")
@@ -35,7 +36,7 @@ func TestMessageQueue_EmptyQueueHasZeroLength(t *testing.T) {
 
 func TestMessageQueue_ForceCloseOnEmptyQueue(t *testing.T) {
 	// Just to get coverage, there is no way to distinguish close from force close on empty queue
-	q := amq.NewQueue(amq.NewQueueHandler)
+	q := amq.NewQueue(queue.NewQueueHandler)
 
 	if q.Len() != 0 {
 		t.Errorf("Unexpected queue length")
@@ -44,7 +45,7 @@ func TestMessageQueue_ForceCloseOnEmptyQueue(t *testing.T) {
 }
 
 func TestMessageQueue_QueueWithoutSubscribersAcummulateMessages(t *testing.T) {
-	q := amq.NewQueue(amq.NewQueueHandler)
+	q := amq.NewQueue(queue.NewQueueHandler)
 	for i := 0; i < 100; i++ {
 		q.Consume(testMsg{})
 	}
@@ -56,7 +57,7 @@ func TestMessageQueue_QueueWithoutSubscribersAcummulateMessages(t *testing.T) {
 }
 
 func TestMessageQueue_EmptySubscibersList(t *testing.T) {
-	q := amq.NewQueue(amq.NewQueueHandler)
+	q := amq.NewQueue(queue.NewQueueHandler)
 	defer q.Close()
 
 	list := q.Subscriptions()
@@ -71,7 +72,7 @@ func TestMessageQueue_EmptySubscibersList(t *testing.T) {
 }
 
 func TestMessageQueue_SubscibersList(t *testing.T) {
-	q := amq.NewQueue(amq.NewQueueHandler)
+	q := amq.NewQueue(queue.NewQueueHandler)
 	defer q.Close()
 
 	subs := map[amq.MessageConsumer]struct{}{
@@ -101,7 +102,7 @@ func TestMessageQueue_SubscibersList(t *testing.T) {
 }
 
 func TestMessageQueue_SubscribeConsumer(t *testing.T) {
-	q := amq.NewQueue(amq.NewQueueHandler)
+	q := amq.NewQueue(queue.NewQueueHandler)
 	defer q.Close()
 
 	c := new(countingConsumer)
@@ -113,7 +114,7 @@ func TestMessageQueue_SubscribeConsumer(t *testing.T) {
 }
 
 func TestMessageQueue_SubscribeConsumerTwiceReturnsError(t *testing.T) {
-	q := amq.NewQueue(amq.NewQueueHandler)
+	q := amq.NewQueue(queue.NewQueueHandler)
 	defer q.Close()
 
 	c := new(countingConsumer)
@@ -130,7 +131,7 @@ func TestMessageQueue_SubscribeConsumerTwiceReturnsError(t *testing.T) {
 }
 
 func TestMessageQueue_UnsubscribeWithEmptySubscriptionsListReturnsError(t *testing.T) {
-	q := amq.NewQueue(amq.NewQueueHandler)
+	q := amq.NewQueue(queue.NewQueueHandler)
 	defer q.Close()
 
 	c := new(countingConsumer)
@@ -142,7 +143,7 @@ func TestMessageQueue_UnsubscribeWithEmptySubscriptionsListReturnsError(t *testi
 }
 
 func TestMessageQueue_UnsubscribeTwiceReturnsError(t *testing.T) {
-	q := amq.NewQueue(amq.NewQueueHandler)
+	q := amq.NewQueue(queue.NewQueueHandler)
 	defer q.Close()
 
 	c := new(countingConsumer)
@@ -164,7 +165,7 @@ func TestMessageQueue_UnsubscribeTwiceReturnsError(t *testing.T) {
 }
 
 func TestMessageQueue_QueueCloseFlushesMessages(t *testing.T) {
-	q := amq.NewQueue(amq.NewQueueHandler)
+	q := amq.NewQueue(queue.NewQueueHandler)
 	c := new(countingConsumer)
 	err := q.Subscribe(c)
 
@@ -195,7 +196,7 @@ func TestMessageQueue_QueueBalancesMessagesBetweenConsumers(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	q := amq.NewQueue(amq.NewQueueHandler)
+	q := amq.NewQueue(queue.NewQueueHandler)
 
 	c1 := new(countingConsumer)
 	c2 := new(countingConsumer)

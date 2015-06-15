@@ -14,10 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package amq
+package queue
 
 import (
 	"gopkg.in/eapache/queue.v1"
+
+	"github.com/canni/paperboymq/amq"
 )
 
 type queueHandler struct {
@@ -28,22 +30,22 @@ type queueHandler struct {
 //
 // Default implementation is not goroutine-safe, concurrent access is controlled
 // inside high-level Queue type.
-func NewQueueHandler() QueueHandler {
+func NewQueueHandler() amq.QueueHandler {
 	return queueHandler{
 		q: queue.New(),
 	}
 }
 
 // Add enqueues message.
-func (self queueHandler) Add(msg Message) {
+func (self queueHandler) Add(msg amq.Message) {
 	self.q.Add(msg)
 }
 
 // Peek returns current element at the front of queue.
 //
 // This method panics if the queue is empty.
-func (self queueHandler) Peek() Message {
-	return self.q.Peek().(Message)
+func (self queueHandler) Peek() amq.Message {
+	return self.q.Peek().(amq.Message)
 }
 
 // Remove dequeues element at the front of queue.

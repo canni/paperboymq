@@ -14,11 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package amq
+package queue
 
 import (
 	"sync"
 	"testing"
+
+	"github.com/canni/paperboymq/amq"
 )
 
 func TestQueueHandler_NewHasZeroLength(t *testing.T) {
@@ -146,13 +148,13 @@ func TestQueueHandler_AddRemoveCycle(t *testing.T) {
 }
 
 type testMsg struct {
-	headers    Headers
+	headers    amq.Headers
 	routingKey string
 	priority   uint8
 	body       []byte
 }
 
-func (self testMsg) Headers() Headers {
+func (self testMsg) Headers() amq.Headers {
 	return self.headers
 }
 
