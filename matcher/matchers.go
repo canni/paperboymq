@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package matcher providers implementations for most basic AMQ match strategies.
 package matcher
 
 import (
