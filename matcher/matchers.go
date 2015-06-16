@@ -26,15 +26,24 @@ import (
 	"github.com/canni/paperboymq/amq"
 )
 
-// Direct matcher matches if both message routing key and binding key are equal.
-var Direct = amq.MatchFunc(func(msg amq.Message, binding amq.Binding) bool {
-	return msg.RoutingKey() == binding.BindingKey()
-})
+// Direct matcher matches if both, message routing key and binding key are equal.
+var Direct = New("direct", directMatchFunc)
 
 // Fanout matcher always matches
-var Fanout = amq.MatchFunc(func(msg amq.Message, binding amq.Binding) bool {
+var Fanout = New("fanout", fanoutMatchFunc)
+
+// Topic matcher matches when routing key matches binding pattern, see AMQP
+// specification for detailed information. There is no need to rewrite all
+// rules here.
+var Topic = New("topic", topicMatchFunc)
+
+func directMatchFunc(msg amq.Message, binding amq.Binding) bool {
+	return msg.RoutingKey() == binding.BindingKey()
+}
+
+func fanoutMatchFunc(msg amq.Message, binding amq.Binding) bool {
 	return true
-})
+}
 
 var patternCache = struct {
 	cache map[string]*regexp.Regexp
@@ -43,10 +52,7 @@ var patternCache = struct {
 	cache: make(map[string]*regexp.Regexp),
 }
 
-// Topic matcher matches when routing key matches binding pattern, see AMQP
-// specification for detailed information. There is no need to rewrite all
-// rules here.
-var Topic = amq.MatchFunc(func(msg amq.Message, binding amq.Binding) bool {
+func topicMatchFunc(msg amq.Message, binding amq.Binding) bool {
 	patternCache.RLock()
 	defer patternCache.RUnlock()
 
@@ -71,4 +77,26 @@ var Topic = amq.MatchFunc(func(msg amq.Message, binding amq.Binding) bool {
 
 		return matcher.MatchString(msg.RoutingKey())
 	}
-})
+}
+
+// New returns Matcher implementation that supports comparision through equality
+// operator `==`
+func New(name string, fn func(amq.Message, amq.Binding) bool) amq.Matcher {
+	return &matcherImpl{
+		name: name,
+		fn:   &fn,
+	}
+}
+
+type matcherImpl struct {
+	name string
+	fn   *func(amq.Message, amq.Binding) bool
+}
+
+func (self *matcherImpl) Matches(msg amq.Message, binding amq.Binding) bool {
+	return (*self.fn)(msg, binding)
+}
+
+func (self matcherImpl) String() string {
+	return self.name
+}

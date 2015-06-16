@@ -174,6 +174,35 @@ func TestTopicMatcher(t *testing.T) {
 	}
 }
 
+func TestMatchers_CanBeCompared(t *testing.T) {
+	cases := []struct {
+		lft, right amq.Matcher
+		result     bool
+	}{
+		{matcher.Direct, matcher.Direct, true},
+		{matcher.Fanout, matcher.Fanout, true},
+		{matcher.Topic, matcher.Topic, true},
+
+		{matcher.Direct, matcher.Fanout, false},
+		{matcher.Direct, matcher.Topic, false},
+		{matcher.Fanout, matcher.Direct, false},
+		{matcher.Fanout, matcher.Topic, false},
+		{matcher.Topic, matcher.Direct, false},
+		{matcher.Topic, matcher.Fanout, false},
+	}
+
+	for i, testCase := range cases {
+		if result := testCase.lft == testCase.right; result != testCase.result {
+			t.Errorf(
+				"case: %d; Matcher equality test failed, expected %t, got %t",
+				i+1,
+				testCase.result,
+				result,
+			)
+		}
+	}
+}
+
 type testMsg struct {
 	headers    amq.Headers
 	routingKey string
