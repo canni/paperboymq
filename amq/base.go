@@ -75,14 +75,6 @@ type Matcher interface {
 	Matches(Message, Binding) bool
 }
 
-// MatchFunc type implements Matcher interface and is simple wrapper for function
-// matchers.
-type MatchFunc func(Message, Binding) bool
-
-func (self MatchFunc) Matches(msg Message, binding Binding) bool {
-	return self(msg, binding)
-}
-
 type binding struct {
 	key      string
 	consumer MessageConsumer
