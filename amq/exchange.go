@@ -35,14 +35,14 @@ var (
 // call. Consumer bound via multiple bindings, will receive message only once.
 type Exchange struct {
 	matcher   Matcher
-	consumers map[Binding]MessageConsumer
+	consumers map[*Binding]MessageConsumer
 	mu        sync.RWMutex
 }
 
 func NewExchange(matcher Matcher) *Exchange {
 	return &Exchange{
 		matcher:   matcher,
-		consumers: make(map[Binding]MessageConsumer),
+		consumers: make(map[*Binding]MessageConsumer),
 	}
 }
 
@@ -64,7 +64,7 @@ func (self *Exchange) Consume(msg Message) {
 	}
 }
 
-func (self *Exchange) BindTo(binding Binding) error {
+func (self *Exchange) BindTo(binding *Binding) error {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
@@ -72,11 +72,11 @@ func (self *Exchange) BindTo(binding Binding) error {
 		return ErrAlreadyBound
 	}
 
-	self.consumers[binding] = binding.Consumer()
+	self.consumers[binding] = binding.Consumer
 	return nil
 }
 
-func (self *Exchange) UnbindFrom(binding Binding) error {
+func (self *Exchange) UnbindFrom(binding *Binding) error {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 

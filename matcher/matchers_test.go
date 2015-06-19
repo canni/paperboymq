@@ -40,7 +40,7 @@ func TestDirectMatcher(t *testing.T) {
 
 	for i, testCase := range cases {
 		msg := testMsg{routingKey: testCase.routingKey}
-		binding := amq.NewBinding(testCase.bindingKey, nil)
+		binding := &amq.Binding{Key: testCase.bindingKey}
 
 		if result := matcher.Direct.Matches(msg, binding); result != testCase.expected {
 			t.Errorf(
@@ -71,7 +71,7 @@ func TestFanoutMatcher(t *testing.T) {
 
 	for i, testCase := range cases {
 		msg := testMsg{routingKey: testCase.routingKey}
-		binding := amq.NewBinding(testCase.bindingKey, nil)
+		binding := &amq.Binding{Key: testCase.bindingKey}
 
 		if result := matcher.Fanout.Matches(msg, binding); result != testCase.expected {
 			t.Errorf(
@@ -156,7 +156,7 @@ func TestTopicMatcher(t *testing.T) {
 
 	for i, testCase := range cases {
 		msg := testMsg{routingKey: testCase.routingKey}
-		binding := amq.NewBinding(testCase.bindingKey, nil)
+		binding := &amq.Binding{Key: testCase.bindingKey}
 
 		if result := matcher.Topic.Matches(msg, binding); result != testCase.expected {
 			t.Errorf(

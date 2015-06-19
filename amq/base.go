@@ -52,45 +52,22 @@ type RoundRobinDispatcher interface {
 	Subscriptions() []MessageConsumer
 }
 
-// Binding is an interface representing connection between Message Exchange and
+// Binding is an type representing connection between Message Exchange and
 // either another Message Exchange or Message Queue.
-//
-// Binding interface implementors MUST support equality check through
-// `==` operator.
-type Binding interface {
-	BindingKey() string
-	Consumer() MessageConsumer
+type Binding struct {
+	Key      string
+	Consumer MessageConsumer
 }
 
 // MessagePublisher is an interface representing entity capable of directing
 // messages to specified binding.
 type MessagePublisher interface {
-	BindTo(Binding) error
-	UnbindFrom(Binding) error
+	BindTo(*Binding) error
+	UnbindFrom(*Binding) error
 }
 
 // Matcher is an interface witch will be used by Exchange implementation
 // to decide whatever to pass message over particular binding.
 type Matcher interface {
-	Matches(Message, Binding) bool
-}
-
-type binding struct {
-	key      string
-	consumer MessageConsumer
-}
-
-func NewBinding(bindingKey string, consumer MessageConsumer) Binding {
-	return &binding{
-		key:      bindingKey,
-		consumer: consumer,
-	}
-}
-
-func (self *binding) BindingKey() string {
-	return self.key
-}
-
-func (self *binding) Consumer() MessageConsumer {
-	return self.consumer
+	Matches(Message, *Binding) bool
 }

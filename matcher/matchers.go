@@ -37,11 +37,11 @@ var Fanout = New("fanout", fanoutMatchFunc)
 // rules here.
 var Topic = New("topic", topicMatchFunc)
 
-func directMatchFunc(msg amq.Message, binding amq.Binding) bool {
-	return msg.RoutingKey() == binding.BindingKey()
+func directMatchFunc(msg amq.Message, binding *amq.Binding) bool {
+	return msg.RoutingKey() == binding.Key
 }
 
-func fanoutMatchFunc(msg amq.Message, binding amq.Binding) bool {
+func fanoutMatchFunc(msg amq.Message, binding *amq.Binding) bool {
 	return true
 }
 
@@ -52,14 +52,14 @@ var patternCache = struct {
 	cache: make(map[string]*regexp.Regexp),
 }
 
-func topicMatchFunc(msg amq.Message, binding amq.Binding) bool {
+func topicMatchFunc(msg amq.Message, binding *amq.Binding) bool {
 	patternCache.RLock()
 	defer patternCache.RUnlock()
 
-	if matcher, found := patternCache.cache[binding.BindingKey()]; found {
+	if matcher, found := patternCache.cache[binding.Key]; found {
 		return matcher.MatchString(msg.RoutingKey())
 	} else {
-		pattern := strings.Replace(binding.BindingKey(), ".", `\.`, -1)
+		pattern := strings.Replace(binding.Key, ".", `\.`, -1)
 		pattern = strings.Replace(pattern, "*", `[0-9A-z]+`, -1)
 		pattern = strings.Replace(pattern, `\.#\.`, `(\.|\.[0-9A-z\.]*\.)`, -1)
 		pattern = strings.Replace(pattern, `\.#`, `(\.[0-9A-z\.]*)?`, -1)
@@ -72,7 +72,7 @@ func topicMatchFunc(msg amq.Message, binding amq.Binding) bool {
 			patternCache.Lock()
 			defer patternCache.Unlock()
 
-			patternCache.cache[binding.BindingKey()] = matcher
+			patternCache.cache[binding.Key] = matcher
 		}()
 
 		return matcher.MatchString(msg.RoutingKey())
@@ -81,7 +81,7 @@ func topicMatchFunc(msg amq.Message, binding amq.Binding) bool {
 
 // New returns Matcher implementation that supports comparision through equality
 // operator `==`
-func New(name string, fn func(amq.Message, amq.Binding) bool) amq.Matcher {
+func New(name string, fn func(amq.Message, *amq.Binding) bool) amq.Matcher {
 	return &matcherImpl{
 		name: name,
 		fn:   &fn,
@@ -90,10 +90,10 @@ func New(name string, fn func(amq.Message, amq.Binding) bool) amq.Matcher {
 
 type matcherImpl struct {
 	name string
-	fn   *func(amq.Message, amq.Binding) bool
+	fn   *func(amq.Message, *amq.Binding) bool
 }
 
-func (self *matcherImpl) Matches(msg amq.Message, binding amq.Binding) bool {
+func (self *matcherImpl) Matches(msg amq.Message, binding *amq.Binding) bool {
 	return (*self.fn)(msg, binding)
 }
 

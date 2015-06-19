@@ -34,7 +34,7 @@ func TestExchange_SilentlyDropsMessagesWhenNoBindings(t *testing.T) {
 func TestExchange_BindToErrorsOnDoubleBind(t *testing.T) {
 	ex := amq.NewExchange(matcher.Direct)
 
-	b := amq.NewBinding("key", new(countingConsumer))
+	b := &amq.Binding{Key: "key", Consumer: new(countingConsumer)}
 
 	err := ex.BindTo(b)
 	if err != nil {
@@ -50,7 +50,7 @@ func TestExchange_BindToErrorsOnDoubleBind(t *testing.T) {
 func TestExchange_UnbindFromErrorsOnDoubleUnind(t *testing.T) {
 	ex := amq.NewExchange(matcher.Direct)
 
-	b := amq.NewBinding("key", new(countingConsumer))
+	b := &amq.Binding{Key: "key", Consumer: new(countingConsumer)}
 
 	err := ex.BindTo(b)
 	if err != nil {
@@ -74,8 +74,8 @@ func TestExchange_UsesMatcherForMessagesDirectionToBindings(t *testing.T) {
 	c1 := new(countingConsumer)
 	c2 := new(countingConsumer)
 
-	b1 := amq.NewBinding("key1", c1)
-	b2 := amq.NewBinding("key2", c2)
+	b1 := &amq.Binding{Key: "key1", Consumer: c1}
+	b2 := &amq.Binding{Key: "key2", Consumer: c2}
 
 	ex.BindTo(b1)
 	ex.BindTo(b2)
@@ -100,8 +100,8 @@ func TestExchange_OnlyOneDeliveryToSingleConsumer(t *testing.T) {
 
 	c := new(countingConsumer)
 
-	b1 := amq.NewBinding("key", c)
-	b2 := amq.NewBinding("key", c)
+	b1 := &amq.Binding{Key: "key", Consumer: c}
+	b2 := &amq.Binding{Key: "key", Consumer: c}
 
 	ex.BindTo(b1)
 	ex.BindTo(b2)
