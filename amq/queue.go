@@ -40,11 +40,11 @@ type Queue struct {
 	subscriptions chan []MessageConsumer
 	lenght        chan int
 	quit, quitCnf chan bool
-	queueFactory  func() QueueHandler
+	handler       QueueHandler
 }
 
 // NewQueue returns initialized Queue.
-func NewQueue(handlerFactory func() QueueHandler) *Queue {
+func NewQueue(handler QueueHandler) *Queue {
 	q := &Queue{
 		input:         make(chan Message),
 		output:        make(chan Message),
@@ -53,7 +53,7 @@ func NewQueue(handlerFactory func() QueueHandler) *Queue {
 		lenght:        make(chan int),
 		quit:          make(chan bool),
 		quitCnf:       make(chan bool),
-		queueFactory:  handlerFactory,
+		handler:       handler,
 	}
 
 	go q.inputHandler()
@@ -136,25 +136,23 @@ func (self *Queue) close(force bool) {
 }
 
 func (self *Queue) inputHandler() {
-	q := self.queueFactory()
-
 	for {
-		if q.Len() > 0 {
+		if self.handler.Len() > 0 {
 			select {
 			case msg := <-self.input:
-				q.Add(msg)
+				self.handler.Add(msg)
 
-			case self.output <- q.Peek():
-				q.Remove()
+			case self.output <- self.handler.Peek():
+				self.handler.Remove()
 
-			case self.lenght <- q.Len():
+			case self.lenght <- self.handler.Len():
 				// Nothing here
 
 			case force := <-self.quit:
 				if !force {
-					for q.Len() > 0 {
-						self.output <- q.Peek()
-						q.Remove()
+					for self.handler.Len() > 0 {
+						self.output <- self.handler.Peek()
+						self.handler.Remove()
 					}
 					close(self.output)
 				}
@@ -164,7 +162,7 @@ func (self *Queue) inputHandler() {
 		} else {
 			select {
 			case msg := <-self.input:
-				q.Add(msg)
+				self.handler.Add(msg)
 
 			case self.lenght <- 0:
 				// Nothing here
