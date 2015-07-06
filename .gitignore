@@ -1,3 +1,6 @@
+# PyCharm/InteliJ
+/.idea
+
 # Coverage reports
 cover.out
 /acc.out
